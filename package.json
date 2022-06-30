@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "script": "app.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,7 +13,6 @@
     "body-parser": "^1.20.0",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
-    "nodemon": "^2.0.16",
-    "request": "^2.88.2"
+    "mongoose": "^6.4.1"
   }
 }

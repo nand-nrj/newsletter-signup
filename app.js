@@ -1,60 +1,89 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const request = require('request');
-const https = require('https');
+const mongoose = require('mongoose');
 
 const app = express();
 
 app.use(express.static('public'));
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', (req,res) => {
-    console.log('Root Get Route');
-    res.sendFile(__dirname+'/signup.html');
+const db = process.env.DB_KEY;
+
+mongoose.connect(db, { useNewUrlParser: true }).then(() => {
+    console.log("Connected to database");
+}).catch(() => console.log("err"));
+
+const schema = new mongoose.Schema({
+    _id: Number,
+    fname: {
+        type: String,
+        required: [true, "Add your first name"],
+    },
+    lname: {
+        type: String,
+        required: [true, "Add your last name"],
+    },
+    email: {
+        type: String,
+        required: [true, "Add your e-mail id"],
+    }
 });
 
-app.post('/', (req,res) => {
+const person = new mongoose.model("Newsletter", schema);
+let collectionSize;
+const getId = () => {
+    person.find((err, val) => {
+        if (err) {
+            console.log(err);
+            collectionSize = -1;
+        }
+        else {
+            console.log(val.length);
+            collectionSize = val.length;
+        }
+    });
+}
+
+app.get('/', (req, res) => {
+    console.log('Root Get Route');
+    getId();
+    res.sendFile(__dirname + '/signup.html');
+});
+
+app.post('/', (req, res) => {
     const firstName = req.body.fname;
     const lastName = req.body.lname;
-    const email = req.body.email;
-    console.log(firstName,lastName,email);
-    const data={
-        members: [{
-            email_address: email,
-            status: "subscribed",
-            merge_fields: {
-                FNAME: firstName,
-                LNAME: lastName,
-            }
-        }]
-    }
+    const eMail = req.body.email;
 
-    let list_id = process.env.LIST_ID;
-    let api_key = process.env.API_KEY;
-    
-    const jsonData= JSON.stringify(data);
-    const url = `https://us14.api.mailchimp.com/3.0//lists/${list_id}`;
-    const options = {
-        method: "POST",
-        auth: `nrj:${api_key}`,
+    const id = collectionSize + 1;
+
+    if (id === 0 || collectionSize === undefined) {
+        console.log("DB Error");
+        res.sendFile(__dirname + '/failure.html');
     }
-    const request = https.request(url,options, (response) => {
-        if(response.statusCode===200){
-            res.sendFile(__dirname+'/success.html');
-        }
-        else{
-            res.sendFile(__dirname+'/failure.html');
-        }
-        response.on("data", (data) => {
-            console.log(JSON.parse(data));
+    else {
+        const data = new person({
+            _id: id,
+            fname: firstName,
+            lname: lastName,
+            email: eMail
         });
-    });
-    request.write(jsonData);
-    request.end();
+
+        data.save((err) => {
+            if (err) {
+                console.log(err);
+                res.sendFile(__dirname + '/failure.html');
+            }
+            else {
+                console.log("Subscription added to database");
+                res.sendFile(__dirname + '/success.html');
+            }
+        });
+    }
 });
 
-app.post('/failure', (req,res) => {
+app.post('/failure', (req, res) => {
     res.redirect('/');
 });
 
